@@ -1,3 +1,9 @@
+## 文件定位
+
+> 文件位置：`docs/hardware/display/raspberrypi-3.5inch.md`
+>
+> 關聯文件：[`../gpu/requirements.md`](../gpu/requirements.md)
+
 ## 🧭 旋轉螢幕 (向左 90°)
 
 1️⃣ 編輯開機參數
@@ -83,7 +89,7 @@ stty size
 2️⃣ 啟動監控畫面
 
 ```bash
-uv run python tui_viewer.py
+uv run python -m hwmonitor_mqtt.viewers.tui_viewer
 ```
 
 3️⃣ 若還是覺得字太擠
@@ -95,7 +101,7 @@ uv run python tui_viewer.py
 
 ## 🎮 PyGame（Buffer Frame）建議（Raspberry Ubuntu ARM）
 
-`pygame_viewer.py` 已改成：
+`hwmonitor_mqtt.viewers.pygame_viewer` 已改成：
 - Backbuffer 離屏渲染
 - `pygame.display.update(dirty_rects)` 區域更新（非每幀 `flip` 全畫面）
 - 自動分頁（每頁 3 台，預設 15 秒）
@@ -109,7 +115,7 @@ uv run python tui_viewer.py
 ### 啟動方式
 
 ```bash
-uv run python pygame_viewer.py
+uv run python -m hwmonitor_mqtt.viewers.pygame_viewer
 ```
 
 在 Raspberry Ubuntu ARM 的純 console 環境，程式現在會預設使用：
@@ -121,13 +127,13 @@ uv run python pygame_viewer.py
 若你在純 console（無 X11/Wayland）：
 
 ```bash
-SDL_VIDEODRIVER=kmsdrm uv run python pygame_viewer.py
+SDL_VIDEODRIVER=kmsdrm uv run python -m hwmonitor_mqtt.viewers.pygame_viewer
 ```
 
 若 `kmsdrm` 不可用再試：
 
 ```bash
-SDL_VIDEODRIVER=fbcon uv run python pygame_viewer.py
+SDL_VIDEODRIVER=fbcon uv run python -m hwmonitor_mqtt.viewers.pygame_viewer
 ```
 
 ### 可調參數（環境變數）
@@ -211,17 +217,22 @@ cat /proc/cmdline
 系統已旋轉後，直接執行：
 
 ```bash
-uv run python pygame_viewer.py
+uv run python -m hwmonitor_mqtt.viewers.pygame_viewer
 ```
 
 若還不對，可切換：
 - `PYGAME_PORTRAIT_ROTATE_DEGREE=90`
 - `PYGAME_PORTRAIT_ROTATE_DEGREE=-90`
 
+## 延伸閱讀
+
+- 硬體文件中心：[`../README.md`](../README.md)
+- GPU 需求與建議：[`../gpu/requirements.md`](../gpu/requirements.md)
+
 例如：
 
 ```bash
-PYGAME_PORTRAIT_ROTATE_DEGREE=-90 uv run python pygame_viewer.py
+PYGAME_PORTRAIT_ROTATE_DEGREE=-90 uv run python -m hwmonitor_mqtt.viewers.pygame_viewer
 ```
 
 ---
@@ -246,7 +257,7 @@ Environment=SDL_VIDEODRIVER=kmsdrm
 Environment=PYGAME_FORCE_PORTRAIT=1
 Environment=PYGAME_PORTRAIT_ROTATE_DEGREE=90
 
-ExecStart=/home/user/monitor/venv/bin/python /home/user/monitor/pygame_viewer.py
+ExecStart=/home/user/monitor/venv/bin/python -m hwmonitor_mqtt.viewers.pygame_viewer
 
 StandardInput=tty
 StandardOutput=tty
@@ -269,7 +280,7 @@ sudo systemctl enable --now pygame-viewer.service
 sudo systemctl status pygame-viewer.service -n 50
 ```
 
-若你原本有 `tui_viewer.py` 的 service，可先停用避免衝突：
+若你原本有 `hwmonitor_mqtt.viewers.tui_viewer` 的 service，可先停用避免衝突：
 
 ```bash
 sudo systemctl disable --now tui-viewer.service

@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tui_viewer import DeviceDisplay
+from hwmonitor_mqtt.viewers.tui_viewer import DeviceDisplay
 
 
 def _make_data(label):

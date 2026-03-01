@@ -325,11 +325,11 @@ class DeviceView:
     disk_read_bps: float
     disk_write_bps: float
     disk_temp_c: Optional[float]
-    cpu_hist: Tuple[float, ...]
-    ram_hist: Tuple[float, ...]
-    cpu_temp_hist: Tuple[float, ...]
-    gpu_temp_hists: Tuple[Tuple[float, ...], ...]
-    last_seen_ts: float
+    cpu_hist: Tuple[float, ...] = ()
+    ram_hist: Tuple[float, ...] = ()
+    cpu_temp_hist: Tuple[float, ...] = ()
+    gpu_temp_hists: Tuple[Tuple[float, ...], ...] = ()
+    last_seen_ts: float = 0.0
 
 
 @dataclass

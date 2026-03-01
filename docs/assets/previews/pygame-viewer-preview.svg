@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-label="PyGame Viewer Realistic Preview">
+  <rect width="1280" height="900" fill="#0a0f1e"/>
+
+  <!-- Top bar -->
+  <rect x="0" y="0" width="1280" height="56" fill="#2563eb"/>
+  <text x="20" y="36" fill="#000000" font-family="monospace" font-size="28" font-weight="700">HW Monitor (5 host)</text>
+  <text x="530" y="36" fill="#000000" font-family="monospace" font-size="18" font-weight="700">Page 1/2 • Next 10s</text>
+  <text x="1020" y="36" fill="#000000" font-family="monospace" font-size="24" font-weight="700">12:52:16</text>
+  <rect x="20" y="46" width="1240" height="5" fill="#122033" rx="2"/>
+  <rect x="20" y="46" width="620" height="5" fill="#e6edf8" rx="2"/>
+
+  <!-- Card 1 -->
+  <rect x="20" y="70" width="1240" height="240" rx="14" fill="#162030" stroke="#1b3e66"/>
+  <text x="40" y="106" fill="#e6edf8" font-family="monospace" font-size="34" font-weight="700">pi-node-01</text>
+  <rect x="40" y="126" width="68" height="22" rx="3" fill="#2a3750"/>
+  <text x="48" y="142" fill="#e6edf8" font-family="monospace" font-size="14">CPU</text><text x="78" y="142" fill="#34d399" font-family="monospace" font-size="14">57°C</text>
+  <rect x="114" y="126" width="68" height="22" rx="3" fill="#2a3750"/>
+  <text x="122" y="142" fill="#e6edf8" font-family="monospace" font-size="14">DSK</text><text x="152" y="142" fill="#34d399" font-family="monospace" font-size="14">44°C</text>
+  <text x="40" y="170" fill="#facc15" font-family="monospace" font-size="16" font-weight="700">NET</text>
+  <text x="82" y="170" fill="#f97316" font-family="monospace" font-size="16">▲820K</text>
+  <text x="170" y="170" fill="#34d399" font-family="monospace" font-size="16">▼2.10M</text>
+  <text x="40" y="194" fill="#7c90b8" font-family="monospace" font-size="16">R/W 15.0M / 6.0M</text>
+  <rect x="330" y="120" width="120" height="120" rx="8" fill="#101b2d"/><path d="M350 210 A40 40 0 1 1 430 210" fill="none" stroke="#34d399" stroke-width="10"/><text x="370" y="190" fill="#e6edf8" font-family="monospace" font-size="18">CPU</text><text x="377" y="212" fill="#34d399" font-family="monospace" font-size="20" font-weight="700">43%</text>
+  <rect x="460" y="120" width="120" height="120" rx="8" fill="#101b2d"/><path d="M480 210 A40 40 0 1 1 560 210" fill="none" stroke="#facc15" stroke-width="10"/><text x="500" y="190" fill="#e6edf8" font-family="monospace" font-size="18">RAM</text><text x="507" y="212" fill="#facc15" font-family="monospace" font-size="20" font-weight="700">58%</text>
+  <rect x="590" y="120" width="120" height="120" rx="8" fill="#101b2d"/><path d="M610 210 A40 40 0 1 1 690 210" fill="none" stroke="#f97316" stroke-width="10"/><text x="630" y="190" fill="#e6edf8" font-family="monospace" font-size="18">GPU</text><text x="637" y="212" fill="#f97316" font-family="monospace" font-size="20" font-weight="700">37%</text>
+  <rect x="740" y="120" width="490" height="50" rx="6" fill="#14223a"/><polyline points="752,160 790,154 830,142 870,146 910,136 950,128 990,132 1030,122 1070,126 1110,118 1150,120 1192,114" fill="none" stroke="#34d399" stroke-width="2"/>
+  <text x="752" y="114" fill="#b8c8e6" font-family="monospace" font-size="14">CPU 57°C</text>
+  <rect x="740" y="180" width="490" height="50" rx="6" fill="#14223a"/><polyline points="752,220 790,214 830,202 870,208 910,198 950,194 990,186 1030,188 1070,180 1110,182 1150,174 1192,176" fill="none" stroke="#f97316" stroke-width="2"/>
+  <text x="752" y="174" fill="#b8c8e6" font-family="monospace" font-size="14">GPU 62°C</text>
+
+  <!-- Card 2 stale -->
+  <rect x="20" y="324" width="1240" height="240" rx="14" fill="#3c262d" stroke="#1b3e66"/>
+  <text x="40" y="360" fill="#e6edf8" font-family="monospace" font-size="34" font-weight="700">jetson-lab</text>
+  <text x="1180" y="360" fill="#fca5a5" font-family="monospace" font-size="18" font-weight="700">STALE</text>
+  <text x="40" y="402" fill="#7c90b8" font-family="monospace" font-size="18">(layout 與上方相同，省略)</text>
+
+  <!-- Card 3 -->
+  <rect x="20" y="578" width="1240" height="240" rx="14" fill="#162030" stroke="#1b3e66"/>
+  <text x="40" y="614" fill="#e6edf8" font-family="monospace" font-size="34" font-weight="700">rpi-edge-03</text>
+  <text x="40" y="656" fill="#7c90b8" font-family="monospace" font-size="18">(layout 與上方相同，省略)</text>
+
+  <!-- Footer -->
+  <rect x="0" y="844" width="1280" height="56" fill="#0c1220"/>
+  <rect x="20" y="854" width="260" height="36" rx="4" fill="#162030"/>
+  <text x="32" y="878" fill="#e6edf8" font-family="monospace" font-size="18" font-weight="700">Host: rpi-console</text>
+  <rect x="292" y="854" width="330" height="36" rx="4" fill="#34d399"/>
+  <text x="304" y="878" fill="#0a0f1e" font-family="monospace" font-size="18" font-weight="700">MQTT: online • devices 5</text>
+  <circle cx="1246" cy="872" r="6" fill="#34d399"/>
+</svg>

@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir psutil paho-mqtt python-dotenv
 
 # 複製程式
 WORKDIR /app
-COPY agent_sender_async.py /app/agent.py
+COPY hwmonitor_mqtt /app/hwmonitor_mqtt
 
 # 預設執行
-CMD ["python", "/app/agent.py"]
+CMD ["python", "-m", "hwmonitor_mqtt.agents.agent_sender_async"]

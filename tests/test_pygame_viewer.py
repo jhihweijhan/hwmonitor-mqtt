@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pygame_viewer import (
+from hwmonitor_mqtt.viewers.pygame_viewer import (
     DataStore,
     DeviceView,
     compute_visible_hosts_sticky,

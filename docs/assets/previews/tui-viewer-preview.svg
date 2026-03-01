@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-label="TUI Viewer Realistic Preview">
+  <rect width="1280" height="900" fill="#11111b"/>
+
+  <!-- App Header -->
+  <rect x="24" y="20" width="1232" height="42" fill="#313244" rx="4"/>
+  <text x="42" y="48" fill="#cdd6f4" font-family="monospace" font-size="20" font-weight="700">HW Monitor TUI</text>
+
+  <!-- Slot 1 -->
+  <rect x="24" y="84" width="1232" height="32" fill="#1e66f5"/>
+  <text x="38" y="106" fill="#ffffff" font-family="monospace" font-size="18" font-weight="700">pi-node-01</text>
+  <rect x="24" y="116" width="1232" height="126" fill="#11111b"/>
+  <text x="38" y="146" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">CPU</text>
+  <text x="100" y="146" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 43.1%</text>
+  <text x="232" y="146" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 57°C</text>
+  <text x="344" y="146" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> MEM</text>
+  <text x="430" y="146" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 62°C</text>
+
+  <text x="38" y="176" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">RAM</text>
+  <text x="100" y="176" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 58.2%</text>
+  <text x="38" y="206" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700">NET</text>
+  <text x="100" y="206" fill="#f9e2af" font-family="monospace" font-size="22">▲   820K</text>
+  <text x="250" y="206" fill="#ff69b4" font-family="monospace" font-size="22">▼  2.10M</text>
+  <text x="38" y="236" fill="#cba6f7" font-family="monospace" font-size="22" font-weight="700">DSK</text>
+  <text x="100" y="236" fill="#89dceb" font-family="monospace" font-size="22">◀  15.0M</text>
+  <text x="250" y="236" fill="#f9e2af" font-family="monospace" font-size="22">▶   6.0M</text>
+  <text x="392" y="236" fill="#a6e3a1" font-family="monospace" font-size="22"> 44°C</text>
+
+  <!-- Slot 2 -->
+  <rect x="24" y="262" width="1232" height="32" fill="#1e66f5"/>
+  <text x="38" y="284" fill="#ffffff" font-family="monospace" font-size="18" font-weight="700">jetson-lab</text>
+  <rect x="24" y="294" width="1232" height="126" fill="#11111b"/>
+  <text x="38" y="324" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">CPU</text>
+  <text x="100" y="324" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> 66.3%</text>
+  <text x="232" y="324" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> 68°C</text>
+  <text x="344" y="324" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> GPU</text>
+  <text x="430" y="324" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> 71°C</text>
+  <text x="38" y="354" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">RAM</text>
+  <text x="100" y="354" fill="#f9e2af" font-family="monospace" font-size="22" font-weight="700"> 72.4%</text>
+  <text x="38" y="384" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700">NET</text>
+  <text x="100" y="384" fill="#f9e2af" font-family="monospace" font-size="22">▲  1.90M</text>
+  <text x="250" y="384" fill="#ff69b4" font-family="monospace" font-size="22">▼  4.50M</text>
+  <text x="38" y="414" fill="#cba6f7" font-family="monospace" font-size="22" font-weight="700">DSK</text>
+  <text x="100" y="414" fill="#89dceb" font-family="monospace" font-size="22">◀  26.0M</text>
+  <text x="250" y="414" fill="#f9e2af" font-family="monospace" font-size="22">▶  11.0M</text>
+  <text x="392" y="414" fill="#f9e2af" font-family="monospace" font-size="22"> 55°C</text>
+
+  <!-- Slot 3 stale -->
+  <rect x="24" y="440" width="1232" height="32" fill="#404040"/>
+  <text x="38" y="462" fill="#cfcfcf" font-family="monospace" font-size="18" font-weight="700">rpi-edge-03</text>
+  <text x="1120" y="462" fill="#cfcfcf" font-family="monospace" font-size="16" font-weight="700">STALE</text>
+  <rect x="24" y="472" width="1232" height="126" fill="#11111b"/>
+  <text x="38" y="502" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">CPU</text>
+  <text x="100" y="502" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 24.8%</text>
+  <text x="232" y="502" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 50°C</text>
+  <text x="38" y="532" fill="#89dceb" font-family="monospace" font-size="22" font-weight="700">RAM</text>
+  <text x="100" y="532" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700"> 40.1%</text>
+  <text x="38" y="562" fill="#a6e3a1" font-family="monospace" font-size="22" font-weight="700">NET</text>
+  <text x="100" y="562" fill="#f9e2af" font-family="monospace" font-size="22">▲   300K</text>
+  <text x="250" y="562" fill="#ff69b4" font-family="monospace" font-size="22">▼   700K</text>
+  <text x="38" y="592" fill="#cba6f7" font-family="monospace" font-size="22" font-weight="700">DSK</text>
+  <text x="100" y="592" fill="#89dceb" font-family="monospace" font-size="22">◀   3.0M</text>
+  <text x="250" y="592" fill="#f9e2af" font-family="monospace" font-size="22">▶   1.0M</text>
+  <text x="392" y="592" fill="#a6e3a1" font-family="monospace" font-size="22"> 41°C</text>
+
+  <!-- Clock row -->
+  <rect x="24" y="622" width="1232" height="54" fill="#1e1e2e" rx="4"/>
+  <text x="36" y="655" fill="#89dceb" font-family="monospace" font-size="20" font-weight="700">Time</text>
+  <text x="96" y="655" fill="#f8f8f2" font-family="monospace" font-size="20" font-weight="700">12:52:16</text>
+  <text x="256" y="655" fill="#89dceb" font-family="monospace" font-size="20" font-weight="700">Date</text>
+  <text x="326" y="655" fill="#f8f8f2" font-family="monospace" font-size="20" font-weight="700">2026-03-01</text>
+  <text x="520" y="655" fill="#89dceb" font-family="monospace" font-size="20" font-weight="700">Day</text>
+  <text x="576" y="655" fill="#f8f8f2" font-family="monospace" font-size="20" font-weight="700">Sunday</text>
+
+  <!-- HostInfoFooter -->
+  <rect x="24" y="694" width="1232" height="28" fill="#1e66f5"/>
+  <text x="36" y="714" fill="#ffffff" font-family="monospace" font-size="16" font-weight="700">RPI CPU 18.0%  GPU 9.0%  RAM 35.0%  TEMP 47°C  GPU_TEMP 53°C  12:52:16</text>
+</svg>

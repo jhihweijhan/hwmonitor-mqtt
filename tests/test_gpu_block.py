@@ -47,10 +47,11 @@ def _import_agent_sender_async():
     sys.modules["paho.mqtt"] = mqtt_module
     sys.modules["paho.mqtt.client"] = client_module
 
-    if "agent_sender_async" in sys.modules:
-        del sys.modules["agent_sender_async"]
+    module_name = "hwmonitor_mqtt.agents.agent_sender_async"
+    if module_name in sys.modules:
+        del sys.modules[module_name]
 
-    return importlib.import_module("agent_sender_async")
+    return importlib.import_module(module_name)
 
 
 def test_get_gpu_block_handles_multiple_drm_cards(monkeypatch):

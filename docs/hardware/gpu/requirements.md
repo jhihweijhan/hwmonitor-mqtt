@@ -1,5 +1,9 @@
 # GPU 監控系統需求
 
+> 文件位置：`docs/hardware/gpu/requirements.md`
+>
+> 關聯文件：[`../display/raspberrypi-3.5inch.md`](../display/raspberrypi-3.5inch.md)
+
 TUI Viewer 的 GPU 監控功能支援多種 GPU 類型，但某些功能需要額外的系統工具。
 
 ## Python 套件需求
@@ -101,7 +105,7 @@ python3 -c "import psutil; print(psutil.sensors_temperatures())"
 
 ### 測試 TUI Viewer
 ```bash
-uv run python tui_viewer.py
+uv run python -m hwmonitor_mqtt.viewers.tui_viewer
 ```
 
 查看 footer 區域：
@@ -128,3 +132,8 @@ sudo usermod -a -G video $USER
 
 # 重新登入後生效
 ```
+
+## 延伸閱讀
+
+- 硬體文件中心：[`../README.md`](../README.md)
+- Raspberry Pi 3.5 吋顯示器設定：[`../display/raspberrypi-3.5inch.md`](../display/raspberrypi-3.5inch.md)
