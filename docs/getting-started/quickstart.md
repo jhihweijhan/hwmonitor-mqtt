@@ -46,3 +46,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sende
 ```
 
 詳細參數與卸載方式請見：`docs/deployment/windows-task-scheduler.md`
+
+## Windows 排程自啟（含 uv 與依賴自動安裝）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sender_task.ps1
+```
+
+詳細參數請見：`docs/deployment/windows-task-scheduler.md`
