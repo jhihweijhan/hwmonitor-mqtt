@@ -267,3 +267,37 @@ def test_windows_gpu_nvidia_fallback_parses_csv():
     assert gpus[0]["temperature_celsius"] == 68.0
     assert gpus[0]["memory_percent"] == 25.0
     assert gpus[0]["temperatures"][0]["label"] == "GPU"
+
+
+def test_update_lhm_metrics_keeps_last_known_gpu_and_cpu_temp_on_partial_poll():
+    module = _import_agent_sender_windows()
+    module.metrics["cpu"] = module.get_cpu_base_block()
+    module.metrics["temperatures"] = None
+    module.metrics["gpu"] = []
+    module.get_gpu_block_nvidia_fallback = lambda: []
+
+    class Sensor:
+        def __init__(self, sensor_type, name, value, parent):
+            self.SensorType = sensor_type
+            self.Name = name
+            self.Value = value
+            self.Parent = parent
+
+    full = [
+        Sensor("Temperature", "CPU Package", 67.0, "/intelcpu/0"),
+        Sensor("Load", "GPU Core", 44.0, "/gpu-nvidia/0"),
+        Sensor("Temperature", "GPU Core", 70.0, "/gpu-nvidia/0"),
+    ]
+    partial = [
+        Sensor("Load", "CPU Total", 12.0, "/intelcpu/0"),
+    ]
+
+    module.update_lhm_metrics(full)
+    assert module.metrics["temperatures"]["cpu"][0]["current"] == 67.0
+    assert len(module.metrics["gpu"]) == 1
+    assert module.metrics["gpu"][0]["temperature_celsius"] == 70.0
+
+    module.update_lhm_metrics(partial)
+    assert module.metrics["temperatures"]["cpu"][0]["current"] == 67.0
+    assert len(module.metrics["gpu"]) == 1
+    assert module.metrics["gpu"][0]["temperature_celsius"] == 70.0

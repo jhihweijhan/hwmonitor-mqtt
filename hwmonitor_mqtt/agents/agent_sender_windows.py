@@ -544,6 +544,41 @@ def process_lhm_sensors(sensors: List[Any], cpu_seed: Optional[Dict[str, Any]] =
     }
 
 
+def _merge_temperature_blocks(existing: Any, incoming: Any) -> Optional[Dict[str, Any]]:
+    merged: Dict[str, Any] = {}
+    if isinstance(existing, dict):
+        merged.update(existing)
+    if isinstance(incoming, dict):
+        for key, value in incoming.items():
+            if value is None:
+                continue
+            if isinstance(value, (list, dict)) and not value:
+                continue
+            merged[key] = value
+    return merged or None
+
+
+def update_lhm_metrics(sensors: List[Any]) -> None:
+    """Apply one LHM sampling cycle without clearing last-known good values."""
+    if sensors:
+        out = process_lhm_sensors(sensors, metrics.get("cpu") if isinstance(metrics.get("cpu"), dict) else None)
+        metrics["cpu"] = out["cpu"]
+        metrics["temperatures"] = _merge_temperature_blocks(metrics.get("temperatures"), out["temperatures"])
+
+        if out["gpus"]:
+            metrics["gpu"] = out["gpus"]
+        else:
+            fallback_gpus = get_gpu_block_nvidia_fallback()
+            if fallback_gpus:
+                metrics["gpu"] = fallback_gpus
+        return
+
+    # WMI poll failed or returned empty; keep last values and only refresh GPU via fallback when possible.
+    fallback_gpus = get_gpu_block_nvidia_fallback()
+    if fallback_gpus:
+        metrics["gpu"] = fallback_gpus
+
+
 # ===== Payload builders (full/esp) =====
 def _pick_cpu_temp_block(temps_block: Any) -> Dict[str, Any]:
     if not isinstance(temps_block, dict):
@@ -805,16 +840,7 @@ async def loop_network():
 async def loop_lhm_wmi():
     while True:
         sensors = get_lhm_wmi_data()
-        if sensors:
-            out = process_lhm_sensors(sensors, metrics.get("cpu") if isinstance(metrics.get("cpu"), dict) else None)
-            metrics["cpu"] = out["cpu"]
-            metrics["temperatures"] = out["temperatures"]
-            metrics["gpu"] = out["gpus"]
-        else:
-            # Keep GPU visibility on NVIDIA hosts even when WMI/LHM is unavailable.
-            fallback_gpus = get_gpu_block_nvidia_fallback()
-            if fallback_gpus:
-                metrics["gpu"] = fallback_gpus
+        update_lhm_metrics(sensors)
         await asyncio.sleep(10)
 
 

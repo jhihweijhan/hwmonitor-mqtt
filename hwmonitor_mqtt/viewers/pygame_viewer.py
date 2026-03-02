@@ -162,6 +162,19 @@ def extract_gpu_percent(payload: Dict[str, Any]) -> float:
     return max(loads) if loads else 0.0
 
 
+def has_gpu_payload(payload: Dict[str, Any]) -> bool:
+    """Return True if payload explicitly carries GPU block(s)."""
+    gpus = payload.get("gpus")
+    if isinstance(gpus, list) and len(gpus) > 0:
+        return True
+    gpu = payload.get("gpu")
+    if isinstance(gpu, dict):
+        return True
+    if isinstance(gpu, list) and len(gpu) > 0:
+        return True
+    return False
+
+
 def extract_cpu_temp(temps_block: Optional[Dict[str, Any]]) -> Optional[float]:
     """Extract CPU temperature from temperature block."""
     if not temps_block:
@@ -376,6 +389,7 @@ class DataStore:
         gpu_temps = tuple(extract_gpu_temps(payload))
         gpu_temp_peak = extract_primary_gpu_temp(gpu_temps)
         gpu_percent = extract_gpu_percent(payload)
+        gpu_present = has_gpu_payload(payload)
         net_up, net_down = extract_network_rates(payload.get("network_io"))
         disk_read, disk_write = extract_disk_rates(payload.get("disk_io"))
         now = time.time()
@@ -388,14 +402,21 @@ class DataStore:
 
             state.cpu_percent = cpu_percent
             state.ram_percent = ram_percent
-            state.gpu_percent = gpu_percent
-            state.cpu_temp_c = cpu_temp
-            state.gpu_temps_c = gpu_temps
+            # Keep last-known values to avoid flicker when sender emits partial frames.
+            if gpu_present:
+                state.gpu_percent = gpu_percent
+                if gpu_temps:
+                    state.gpu_temps_c = gpu_temps
+            if cpu_temp is not None:
+                state.cpu_temp_c = cpu_temp
+            if gpu_temps:
+                state.gpu_temps_c = gpu_temps
             state.net_up_bps = net_up
             state.net_down_bps = net_down
             state.disk_read_bps = disk_read
             state.disk_write_bps = disk_write
-            state.disk_temp_c = disk_temp
+            if disk_temp is not None:
+                state.disk_temp_c = disk_temp
             state.last_seen_ts = now
             state.cpu_hist.append(cpu_percent)
             state.ram_hist.append(ram_percent)
