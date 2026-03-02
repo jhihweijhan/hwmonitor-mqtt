@@ -137,3 +137,58 @@ uv run pytest -q
 
 本專案採用 `GNU GPL v3.0`。  
 可商用，但散佈修改版或衍生作品時，需依 GPL 條款提供對應原始碼。詳見 [LICENSE](./LICENSE)。
+
+## Windows Sender 安裝與注意事項
+
+建議使用「系統管理員」PowerShell 執行以下步驟。
+
+### 1. 準備 `.env`
+
+```powershell
+Copy-Item .env.example .env
+```
+
+請至少確認：
+- `BROKER_HOST`
+- `BROKER_PORT`
+- `MQTT_USER`
+- `MQTT_PASS`
+
+### 2. 安裝 Windows sender 排程（建議開機自動啟動）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sender_task.ps1 -AtStartup
+```
+
+說明：
+- 會優先使用 `uv`（若可用），並執行 `uv sync` 安裝依賴。
+- 會自動檢查/安裝 LibreHardwareMonitor 到 `third_party/librehardwaremonitor`（預設啟用）。
+- `-AtStartup` 會用 `SYSTEM` 建立排程，通常可避免 UAC 導致的 LHM 啟動問題。
+
+### 3. 啟動與檢查
+
+```powershell
+Start-ScheduledTask -TaskName HWMonitorMQTTSender
+Get-ScheduledTaskInfo -TaskName HWMonitorMQTTSender
+```
+
+### 4. 重要注意事項
+
+- 不要同時啟動多個 sender 實例，否則 viewer 可能出現 CPU/GPU 資料跳動或 `NA` 閃爍。
+- 若看到 `Access is denied (0x80070005)`，請改用系統管理員 PowerShell。
+- 若看到 `WinError 740`，代表目前權限不足以啟動 LibreHardwareMonitor。
+- Windows sender 會先嘗試 WMI；若 WMI 回傳空資料，會改用 `LibreHardwareMonitorLib.dll`（`pythonnet`）讀取感測器，並保留 `nvidia-smi` fallback。
+- 安裝後通常不需要重開機。
+
+### 5. 清理重複 sender（必要時）
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'hwmonitor_mqtt\.agents\.agent_sender_(windows|async)' -or $_.CommandLine -match 'start_windows_sender\.ps1' } |
+  Select-Object ProcessId, Name, CommandLine
+
+# 確認後再停止
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'hwmonitor_mqtt\.agents\.agent_sender_(windows|async)' -or $_.CommandLine -match 'start_windows_sender\.ps1' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```

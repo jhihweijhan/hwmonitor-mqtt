@@ -30,3 +30,7 @@ hwmonitor_mqtt/
 - 若可用，會透過 `root/LibreHardwareMonitor` WMI provider 補齊 CPU 溫度/時脈、儲存裝置溫度與 GPU 資料。
 - 支援 `SENDER_PROFILE=full|esp`，payload schema 與 `agent_sender_async.py` 對齊（含 `gpu` + `gpus`）。
 - 可使用 `LHM_AUTOSTART=1` 在 sender 啟動時自動拉起 LibreHardwareMonitor。
+
+## Windows 時序
+
+- 詳細流程請見：[Windows Sender 運作時序圖](./windows-runtime-sequence.md)

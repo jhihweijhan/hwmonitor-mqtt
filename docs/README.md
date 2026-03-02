@@ -17,3 +17,7 @@
 2. 準備上線：再看「部署指南」與「環境變數」
 3. 進階調校：看「系統架構」與「硬體設定」
 - [Windows 開機自啟（Task Scheduler）](./deployment/windows-task-scheduler.md)
+
+## Windows 架構補充
+
+- [Windows Sender 運作時序圖](./architecture/windows-runtime-sequence.md)
