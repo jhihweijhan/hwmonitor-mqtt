@@ -15,7 +15,8 @@ try {
     Write-Output "Scheduled task '$TaskName' removed."
 }
 catch {
-    if ($_.Exception.Message -match "cannot find the file specified|找不到指定的檔案") {
+    $message = $_.Exception.Message
+    if ($message -like "*cannot find*" -or $message -like "*???*") {
         Write-Output "Scheduled task '$TaskName' does not exist."
         exit 0
     }

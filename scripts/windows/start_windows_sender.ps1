@@ -1,7 +1,7 @@
 param(
     [string]$ProjectRoot = "",
     [string]$PythonExe = "python",
-    [bool]$UseUv = $true,
+    [switch]$UseUv,
     [string]$UvExe = "",
     [string]$UvCacheDir = "",
     [string]$UvPythonInstallDir = ""

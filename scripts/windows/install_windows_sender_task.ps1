@@ -129,11 +129,11 @@ $argList = @(
     "-ExecutionPolicy", "Bypass",
     "-File", "`"$StartScript`"",
     "-ProjectRoot", "`"$ProjectRoot`"",
-    "-PythonExe", "`"$PythonExe`"",
-    "-UseUv", "$UseUv"
+    "-PythonExe", "`"$PythonExe`""
 )
 
 if ($UseUv -and $resolvedUvExe) {
+    $argList += "-UseUv:`$true"
     $argList += "-UvExe"
     $argList += "`"$resolvedUvExe`""
     $argList += "-UvCacheDir"
