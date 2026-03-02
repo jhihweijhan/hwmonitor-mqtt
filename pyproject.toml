@@ -9,6 +9,7 @@ dependencies = [
     "jinja2>=3.1.0",
     "paho-mqtt>=2.1.0",
     "psutil>=7.0.0",
+    "wmi>=1.5.1; platform_system == 'Windows'",
     "python-dotenv>=1.1.1",
     "textual>=6.3.0",
     "python-multipart>=0.0.9",
