@@ -36,3 +36,13 @@ docker compose --profile full up -d
 
 - Web UI：`http://localhost:8088`
 - 日誌：`docker compose logs -f`
+
+## Windows 自啟（非 Docker）
+
+若你要在 Windows 主機常駐 sender，可用排程工作自啟：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sender_task.ps1
+```
+
+詳細參數與卸載方式請見：`docs/deployment/windows-task-scheduler.md`
