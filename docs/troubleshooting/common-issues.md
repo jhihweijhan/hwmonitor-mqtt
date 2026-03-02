@@ -54,3 +54,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sende
 `-AtStartup` 會以 `SYSTEM` 建立排程，通常可避免 UAC 導致的 LHM 啟動失敗。
 
 另外，Windows sender 已加入 NVIDIA `nvidia-smi` fallback；若 LHM/WMI 暫不可用，仍可回報基本 GPU 指標。
+
+## Windows sender: CPU/GPU intermittently becomes `NA`
+
+If your viewer sometimes shows GPU data and then `NA`, or CPU temperature appears/disappears,
+this is usually caused by partial sensor polls from LibreHardwareMonitor WMI.
+
+Current sender behavior:
+- Keeps last-known non-empty CPU temperature entries instead of clearing them on partial polls.
+- Merges multi-GPU data by stable device id (`nvidia-0`, `nvidia-1`, etc.) to avoid dropping a secondary GPU when one poll is incomplete.
+- Uses `nvidia-smi` fallback every cycle to refresh NVIDIA metrics when WMI is temporarily missing.
+
+Notes:
+- Reboot is usually not required after installing the task.
+- If logs contain `WinError 740`, run sender task as `SYSTEM` (`-AtStartup`) or start LibreHardwareMonitor with elevated permission.

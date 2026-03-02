@@ -301,3 +301,59 @@ def test_update_lhm_metrics_keeps_last_known_gpu_and_cpu_temp_on_partial_poll():
     assert module.metrics["temperatures"]["cpu"][0]["current"] == 67.0
     assert len(module.metrics["gpu"]) == 1
     assert module.metrics["gpu"][0]["temperature_celsius"] == 70.0
+
+
+def test_process_lhm_sensors_picks_cpu_temp_by_name_when_parent_is_generic():
+    module = _import_agent_sender_windows()
+
+    class Sensor:
+        def __init__(self, sensor_type, name, value, parent):
+            self.SensorType = sensor_type
+            self.Name = name
+            self.Value = value
+            self.Parent = parent
+
+    sensors = [
+        Sensor("Temperature", "CPU Package", 63.5, "/lpc/nct6798d/0"),
+        Sensor("Load", "GPU Core", 17.0, "/gpu-intel/0"),
+    ]
+
+    out = module.process_lhm_sensors(sensors, module.get_cpu_base_block())
+    assert out["temperatures"]["cpu"][0]["current"] == 63.5
+
+
+def test_update_lhm_metrics_keeps_missing_secondary_gpu_from_previous_cycle():
+    module = _import_agent_sender_windows()
+    module.metrics["cpu"] = module.get_cpu_base_block()
+    module.metrics["temperatures"] = None
+    module.metrics["gpu"] = []
+    module.get_gpu_block_nvidia_fallback = lambda: []
+
+    class Sensor:
+        def __init__(self, sensor_type, name, value, parent):
+            self.SensorType = sensor_type
+            self.Name = name
+            self.Value = value
+            self.Parent = parent
+
+    full = [
+        Sensor("Load", "GPU Core", 44.0, "/gpu-nvidia/0"),
+        Sensor("Temperature", "GPU Core", 70.0, "/gpu-nvidia/0"),
+        Sensor("Load", "GPU Core", 55.0, "/gpu-nvidia/1"),
+        Sensor("Temperature", "GPU Core", 75.0, "/gpu-nvidia/1"),
+    ]
+    partial = [
+        Sensor("Load", "GPU Core", 22.0, "/gpu-nvidia/0"),
+        Sensor("Temperature", "GPU Core", 66.0, "/gpu-nvidia/0"),
+    ]
+
+    module.update_lhm_metrics(full)
+    assert len(module.metrics["gpu"]) == 2
+    assert module.metrics["gpu"][1]["id"] == "nvidia-1"
+    assert module.metrics["gpu"][1]["temperature_celsius"] == 75.0
+
+    module.update_lhm_metrics(partial)
+    assert len(module.metrics["gpu"]) == 2
+    gpu_by_id = {gpu["id"]: gpu for gpu in module.metrics["gpu"]}
+    assert gpu_by_id["nvidia-0"]["temperature_celsius"] == 66.0
+    assert gpu_by_id["nvidia-1"]["temperature_celsius"] == 75.0

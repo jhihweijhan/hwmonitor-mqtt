@@ -387,7 +387,7 @@ def get_gpu_block_nvidia_fallback() -> List[Dict[str, Any]]:
 
     gpus: List[Dict[str, Any]] = []
     reader = csv.reader(result.stdout.strip().splitlines())
-    for row in reader:
+    for idx, row in enumerate(reader):
         try:
             usage = _safe_float(row[0])
             gpu_temp = _safe_float(row[1])
@@ -403,6 +403,7 @@ def get_gpu_block_nvidia_fallback() -> List[Dict[str, Any]]:
                     pass
             gpus.append(
                 {
+                    "id": f"nvidia-{idx}",
                     "usage_percent": round(usage, 1),
                     "temperature_celsius": round(gpu_temp, 1) if gpu_temp > 0 else None,
                     "temperature_label": "GPU",
@@ -418,11 +419,36 @@ def get_gpu_block_nvidia_fallback() -> List[Dict[str, Any]]:
 
 
 def _parse_core_index(name: str) -> Optional[int]:
-    m = re.search(r"#(\d+)", name)
-    if not m:
-        return None
-    idx = int(m.group(1)) - 1
-    return idx if idx >= 0 else None
+    m_hash = re.search(r"#(\d+)", name)
+    if m_hash:
+        idx = int(m_hash.group(1)) - 1
+        return idx if idx >= 0 else None
+
+    m_plain = re.search(r"\bcore\s+(\d+)\b", name, flags=re.IGNORECASE)
+    if m_plain:
+        idx = int(m_plain.group(1))
+        return idx if idx >= 0 else None
+    return None
+
+
+def _canonical_gpu_key(parent_path: str, sensor_name: str = "") -> str:
+    raw_parent = (parent_path or "").strip("/").lower()
+    if raw_parent:
+        m = re.search(r"(?:^|/)gpu-([a-z0-9_]+)/(\d+)", raw_parent)
+        if m:
+            return f"{m.group(1)}-{m.group(2)}"
+
+        m = re.search(r"(?:^|/)gpu/(\d+)", raw_parent)
+        if m:
+            return f"gpu-{m.group(1)}"
+
+        if "gpu" in raw_parent:
+            return raw_parent.replace("/", "-")
+
+    m_name = re.search(r"gpu\s*#?\s*(\d+)", (sensor_name or "").lower())
+    if m_name:
+        return f"gpu-{m_name.group(1)}"
+    return "gpu-0"
 
 
 def _storage_key_from_parent(parent_path: str) -> str:
@@ -435,6 +461,7 @@ def _storage_key_from_parent(parent_path: str) -> str:
 def _ensure_gpu_record(gpu_map: Dict[str, Dict[str, Any]], key: str) -> Dict[str, Any]:
     if key not in gpu_map:
         gpu_map[key] = {
+            "id": key,
             "usage_percent": 0.0,
             "temperature_celsius": None,
             "temperature_label": None,
@@ -457,6 +484,7 @@ def process_lhm_sensors(sensors: List[Any], cpu_seed: Optional[Dict[str, Any]] =
     for sensor in sensors:
         sensor_type = str(getattr(sensor, "SensorType", ""))
         name = str(getattr(sensor, "Name", ""))
+        lname = name.lower()
         value = getattr(sensor, "Value", None)
         parent_path = str(getattr(sensor, "Parent", ""))
         parent_lower = parent_path.lower()
@@ -464,28 +492,34 @@ def process_lhm_sensors(sensors: List[Any], cpu_seed: Optional[Dict[str, Any]] =
         if value is None:
             continue
 
+        is_cpu_name = ("cpu" in lname and "gpu" not in lname) or any(
+            token in lname for token in ("package", "tdie", "tctl", "core max")
+        )
+        is_cpu_sensor = ("cpu" in parent_lower) or is_cpu_name
+        is_gpu_name = ("gpu" in lname) or ("vram" in lname)
+        is_gpu_sensor = ("gpu" in parent_lower) or is_gpu_name
+
         # CPU sensors
-        if "cpu" in parent_lower:
+        if is_cpu_sensor and not ("gpu" in parent_lower):
             if sensor_type == "Load":
-                if name == "CPU Total":
+                if lname in {"cpu total", "total"} or name == "CPU Total":
                     cpu_block["percent_total"] = _safe_float(value)
-                elif "CPU Core" in name:
+                elif "cpu core" in lname or "core #" in lname or "core " in lname:
                     idx = _parse_core_index(name)
                     if idx is not None:
                         cpu_loads[idx] = _safe_float(value)
-            elif sensor_type == "Clock" and "CPU Core" in name:
+            elif sensor_type == "Clock":
                 idx = _parse_core_index(name)
-                if idx is not None:
+                if idx is not None and ("cpu core" in lname or "core #" in lname or "core " in lname):
                     cpu_clocks[idx] = _safe_float(value)
             elif sensor_type == "Temperature":
                 cpu_temps.append({"label": name, "current": _safe_float(value)})
             continue
 
         # GPU sensors
-        if "/gpu-" in parent_lower:
-            gpu_key = parent_lower.strip("/")
+        if is_gpu_sensor:
+            gpu_key = _canonical_gpu_key(parent_lower, name)
             gpu = _ensure_gpu_record(gpu_map, gpu_key)
-            lname = name.lower()
 
             if sensor_type == "Load":
                 usage = _safe_float(value)
@@ -558,25 +592,127 @@ def _merge_temperature_blocks(existing: Any, incoming: Any) -> Optional[Dict[str
     return merged or None
 
 
+def _gpu_id(gpu_obj: Any, index: int) -> str:
+    if isinstance(gpu_obj, dict):
+        gpu_id = gpu_obj.get("id")
+        if isinstance(gpu_id, str) and gpu_id.strip():
+            return gpu_id.strip().lower()
+    return f"idx-{index}"
+
+
+def _merge_gpu_record(existing: Optional[Dict[str, Any]], incoming: Dict[str, Any]) -> Dict[str, Any]:
+    base = dict(existing) if isinstance(existing, dict) else {}
+    merged = dict(base)
+
+    for key, value in incoming.items():
+        if key == "temperatures":
+            if isinstance(value, list) and value:
+                merged[key] = value
+            elif key not in merged:
+                merged[key] = []
+            continue
+
+        if value is None:
+            continue
+
+        if key == "usage_percent":
+            merged[key] = round(_safe_float(value), 1)
+            continue
+
+        if key in {"memory_used_mb", "memory_total_mb"}:
+            incoming_val = _safe_float(value)
+            existing_val = _safe_float(base.get(key))
+            if incoming_val <= 0 and existing_val > 0:
+                continue
+            merged[key] = incoming_val
+            continue
+
+        if key == "memory_percent":
+            incoming_val = _safe_float(value)
+            existing_val = _safe_float(base.get(key))
+            if incoming_val <= 0 and existing_val > 0:
+                continue
+            merged[key] = round(incoming_val, 1)
+            continue
+
+        if key == "temperature_celsius":
+            merged[key] = round(_safe_float(value), 1)
+            continue
+
+        merged[key] = value
+
+    if merged.get("temperature_celsius") is None:
+        temps = merged.get("temperatures")
+        if isinstance(temps, list) and temps:
+            vals = [_safe_float(t.get("current"), default=-273.15) for t in temps if isinstance(t, dict)]
+            if vals:
+                merged["temperature_celsius"] = round(max(vals), 1)
+
+    mem_total = _safe_float(merged.get("memory_total_mb"))
+    mem_used = _safe_float(merged.get("memory_used_mb"))
+    if mem_total > 0:
+        merged["memory_percent"] = round(mem_used / mem_total * 100.0, 1)
+    else:
+        merged["memory_percent"] = round(_safe_float(merged.get("memory_percent")), 1)
+
+    merged["usage_percent"] = round(_safe_float(merged.get("usage_percent")), 1)
+    if not isinstance(merged.get("temperatures"), list):
+        merged["temperatures"] = []
+    return merged
+
+
+def _merge_gpu_blocks(existing: Any, incoming: Any) -> List[Dict[str, Any]]:
+    existing_list = [gpu for gpu in (existing if isinstance(existing, list) else []) if isinstance(gpu, dict)]
+    incoming_list = [gpu for gpu in (incoming if isinstance(incoming, list) else []) if isinstance(gpu, dict)]
+
+    if not incoming_list:
+        return existing_list
+    if not existing_list:
+        merged_only: List[Dict[str, Any]] = []
+        for idx, gpu in enumerate(incoming_list):
+            merged = _merge_gpu_record(None, gpu)
+            merged["id"] = _gpu_id(gpu, idx)
+            merged_only.append(merged)
+        return merged_only
+
+    existing_map = {_gpu_id(gpu, idx): gpu for idx, gpu in enumerate(existing_list)}
+    merged_list: List[Dict[str, Any]] = []
+    consumed: set[str] = set()
+
+    for idx, gpu in enumerate(incoming_list):
+        gpu_id = _gpu_id(gpu, idx)
+        merged = _merge_gpu_record(existing_map.get(gpu_id), gpu)
+        merged["id"] = gpu_id
+        merged_list.append(merged)
+        consumed.add(gpu_id)
+
+    for idx, gpu in enumerate(existing_list):
+        gpu_id = _gpu_id(gpu, idx)
+        if gpu_id in consumed:
+            continue
+        merged_list.append(gpu)
+
+    return merged_list
+
+
 def update_lhm_metrics(sensors: List[Any]) -> None:
     """Apply one LHM sampling cycle without clearing last-known good values."""
+    prev_gpus = metrics.get("gpu")
+    existing_gpus = prev_gpus if isinstance(prev_gpus, list) else []
+
+    lhm_gpus: List[Dict[str, Any]] = []
     if sensors:
         out = process_lhm_sensors(sensors, metrics.get("cpu") if isinstance(metrics.get("cpu"), dict) else None)
         metrics["cpu"] = out["cpu"]
         metrics["temperatures"] = _merge_temperature_blocks(metrics.get("temperatures"), out["temperatures"])
+        lhm_gpus = out["gpus"]
 
-        if out["gpus"]:
-            metrics["gpu"] = out["gpus"]
-        else:
-            fallback_gpus = get_gpu_block_nvidia_fallback()
-            if fallback_gpus:
-                metrics["gpu"] = fallback_gpus
-        return
-
-    # WMI poll failed or returned empty; keep last values and only refresh GPU via fallback when possible.
+    # Always refresh fallback so transient WMI gaps won't drop NVIDIA data.
     fallback_gpus = get_gpu_block_nvidia_fallback()
-    if fallback_gpus:
-        metrics["gpu"] = fallback_gpus
+    cycle_gpus = _merge_gpu_blocks(lhm_gpus, fallback_gpus)
+    merged_gpus = _merge_gpu_blocks(existing_gpus, cycle_gpus)
+    if merged_gpus:
+        metrics["gpu"] = merged_gpus
 
 
 # ===== Payload builders (full/esp) =====
