@@ -9,6 +9,7 @@ Async System Monitor for Windows (Multi-rate MQTT sender)
 
 import asyncio
 import csv
+import dataclasses
 import json
 import os
 import platform
@@ -196,6 +197,125 @@ class LHMProcessManager:
                 pass
 
 
+@dataclasses.dataclass
+class LHMSensorSnapshot:
+    SensorType: str
+    Name: str
+    Value: Any
+    Parent: str
+
+
+class LHMInProcessCollector:
+    """Collects LHM sensors directly from LibreHardwareMonitorLib.dll via pythonnet."""
+
+    def __init__(self):
+        self._computer = None
+        self._loaded = False
+        self._error: Optional[str] = None
+
+    @property
+    def available(self) -> bool:
+        if self._loaded:
+            return self._computer is not None
+        self._loaded = True
+        try:
+            import clr  # type: ignore
+        except Exception as e:
+            self._error = f"pythonnet unavailable: {e}"
+            return False
+
+        dll_path = self._resolve_lib_dll()
+        if dll_path is None:
+            self._error = "LibreHardwareMonitorLib.dll not found"
+            return False
+
+        try:
+            clr.AddReference(str(dll_path))
+            from LibreHardwareMonitor.Hardware import Computer  # type: ignore
+
+            comp = Computer()
+            for attr in (
+                "IsCpuEnabled",
+                "IsGpuEnabled",
+                "IsMemoryEnabled",
+                "IsStorageEnabled",
+                "IsMotherboardEnabled",
+                "IsControllerEnabled",
+                "IsNetworkEnabled",
+            ):
+                if hasattr(comp, attr):
+                    setattr(comp, attr, True)
+            comp.Open()
+            self._computer = comp
+            self._error = None
+            print(f"Loaded LibreHardwareMonitorLib: {dll_path}")
+            return True
+        except Exception as e:
+            self._computer = None
+            self._error = f"Failed to init LibreHardwareMonitorLib: {e}"
+            print(self._error)
+            return False
+
+    @staticmethod
+    def _resolve_lib_dll() -> Optional[Path]:
+        candidates: List[Path] = []
+        if LHM_PATH:
+            lhm_path_obj = Path(LHM_PATH)
+            if lhm_path_obj.suffix.lower() == ".dll":
+                candidates.append(lhm_path_obj)
+            candidates.append(lhm_path_obj.parent / "LibreHardwareMonitorLib.dll")
+
+        project_root = Path(__file__).resolve().parents[2]
+        candidates.append(project_root / "third_party" / "librehardwaremonitor" / "LibreHardwareMonitorLib.dll")
+
+        for p in candidates:
+            if p.exists() and p.is_file():
+                return p
+        return None
+
+    @staticmethod
+    def _walk_hardware(hardware: Any, out: List[LHMSensorSnapshot]) -> None:
+        try:
+            hardware.Update()
+        except Exception:
+            pass
+
+        parent_id = str(getattr(hardware, "Identifier", "")) or str(getattr(hardware, "Name", ""))
+        sensors = getattr(hardware, "Sensors", None)
+        if sensors is not None:
+            for sensor in sensors:
+                try:
+                    out.append(
+                        LHMSensorSnapshot(
+                            SensorType=str(getattr(sensor, "SensorType", "")),
+                            Name=str(getattr(sensor, "Name", "")),
+                            Value=getattr(sensor, "Value", None),
+                            Parent=parent_id,
+                        )
+                    )
+                except Exception:
+                    continue
+
+        sub_hardware = getattr(hardware, "SubHardware", None)
+        if sub_hardware is None:
+            return
+        for sub in sub_hardware:
+            LHMInProcessCollector._walk_hardware(sub, out)
+
+    def get_sensors(self) -> List[LHMSensorSnapshot]:
+        if not self.available or self._computer is None:
+            return []
+
+        out: List[LHMSensorSnapshot] = []
+        try:
+            for hw in self._computer.Hardware:
+                self._walk_hardware(hw, out)
+        except Exception as e:
+            self._error = f"LibreHardwareMonitorLib read failed: {e}"
+            return []
+        return out
+
+
 # ===== MQTT Client =====
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"agent-{HOSTNAME}")
 mqtt_client.username_pw_set(MQTT_USER, MQTT_PASS)
@@ -243,6 +363,7 @@ metrics: Dict[str, Any] = {
 }
 
 _lhm_manager = LHMProcessManager()
+_lhm_lib_collector = LHMInProcessCollector()
 _last_esp_signature: Optional[Dict[str, float]] = None
 _last_esp_publish_monotonic = 0.0
 
@@ -976,6 +1097,8 @@ async def loop_network():
 async def loop_lhm_wmi():
     while True:
         sensors = get_lhm_wmi_data()
+        if not sensors:
+            sensors = _lhm_lib_collector.get_sensors()
         update_lhm_metrics(sensors)
         await asyncio.sleep(10)
 
@@ -1025,7 +1148,13 @@ async def main():
     if wmi is None:
         print("python wmi package is not installed. LHM/WMI metrics will be unavailable.")
     else:
-        _lhm_manager.ensure_ready()
+        if not _lhm_manager.ensure_ready():
+            print("LHM WMI not ready. Will try LibreHardwareMonitorLib in-process collector.")
+
+    if _lhm_lib_collector.available:
+        print("LibreHardwareMonitorLib collector is available.")
+    else:
+        print("LibreHardwareMonitorLib collector unavailable; CPU/GPU temperatures depend on WMI/fallback.")
 
     if SENDER_PROFILE == "esp":
         reset_esp_publish_state()

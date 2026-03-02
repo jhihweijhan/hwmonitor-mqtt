@@ -68,3 +68,4 @@ Current sender behavior:
 Notes:
 - Reboot is usually not required after installing the task.
 - If logs contain `WinError 740`, run sender task as `SYSTEM` (`-AtStartup`) or start LibreHardwareMonitor with elevated permission.
+- Windows sender now also tries `LibreHardwareMonitorLib.dll` (via `pythonnet`) when WMI returns empty results.
