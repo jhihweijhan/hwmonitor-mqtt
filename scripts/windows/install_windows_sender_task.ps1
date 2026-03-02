@@ -249,16 +249,30 @@ else {
     $resolvedLhmExe = Ensure-LhmExecutable -Candidate $LhmPath -InstallDir $LhmInstallDir -RootPath $ProjectRoot -InstallIfMissing $EnsureLhm -DownloadUrl $LhmDownloadUrl
 }
 
+$taskUseUv = $UseUv
+$taskPythonExe = $PythonExe
+if ($AtStartup -and $UseUv -and $resolvedUvExe -and -not ($resolvedUvExe -like "<*")) {
+    $userProfilePath = $env:USERPROFILE
+    if (-not [string]::IsNullOrWhiteSpace($userProfilePath) -and $resolvedUvExe.ToLower().StartsWith($userProfilePath.ToLower())) {
+        $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (-not (Test-Path $venvPython) -and -not $WhatIf) {
+            throw "AtStartup task runs as SYSTEM; uv in user profile is not reliable. Missing venv python: $venvPython"
+        }
+        $taskUseUv = $false
+        $taskPythonExe = $venvPython
+    }
+}
+
 $argList = @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-File", "`"$StartScript`"",
     "-ProjectRoot", "`"$ProjectRoot`"",
-    "-PythonExe", "`"$PythonExe`""
+    "-PythonExe", "`"$taskPythonExe`""
 )
 
-if ($UseUv -and $resolvedUvExe -and -not ($resolvedUvExe -like "<*")) {
-    $argList += "-UseUv:`$true"
+if ($taskUseUv -and $resolvedUvExe -and -not ($resolvedUvExe -like "<*")) {
+    $argList += "-UseUv"
     $argList += "-UvExe"
     $argList += "`"$resolvedUvExe`""
     $argList += "-UvCacheDir"
@@ -284,6 +298,8 @@ if ($WhatIf) {
     Write-Output "  EnsureDeps: $EnsureDeps"
     Write-Output "  EnsureLhm: $EnsureLhm"
     Write-Output "  LhmPath: $resolvedLhmExe"
+    Write-Output "  TaskUseUv: $taskUseUv"
+    Write-Output "  TaskPythonExe: $taskPythonExe"
     Write-Output "  LhmInstallDir: $LhmInstallDir"
     Write-Output "  AtStartup: $AtStartup"
     Write-Output "  Action: powershell.exe $($argList -join ' ')"

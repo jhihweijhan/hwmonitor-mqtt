@@ -352,15 +352,26 @@ function ensureCard(host){
         ? `${(swapUsed/1024/1024/1024).toFixed(1)} / ${(swapTotal/1024/1024/1024).toFixed(1)} GB`
         : "—";
 
-      // CPU 溫度 + GPU 溫度
+      // CPU 溫度 + GPU 溫度/使用率
       const temps = data.temperatures || null;
       const cpuNow = pickCpuTemp(temps);
       if (isFinite(cpuNow)) { ui.cpuTemp.textContent = `CPU ${cpuNow.toFixed(1)}°C`; ui.cpuTemp.classList.remove("hidden"); }
       else { ui.cpuTemp.classList.add("hidden"); }
 
-      const gpuNow = pickGpuTemp(temps);
-      if (isFinite(gpuNow)) { ui.gpuBadge.textContent = `GPU ${gpuNow.toFixed(1)}°C`; ui.gpuBadge.classList.remove("hidden"); }
-      else { ui.gpuBadge.classList.add("hidden"); }
+      const gpuNow = pickGpuTemp(data, temps);
+      const gpuUsage = pickGpuUsage(data);
+      if (isFinite(gpuNow) && isFinite(gpuUsage)) {
+        ui.gpuBadge.textContent = `GPU ${gpuUsage.toFixed(1)}% ${gpuNow.toFixed(1)}°C`;
+        ui.gpuBadge.classList.remove("hidden");
+      } else if (isFinite(gpuNow)) {
+        ui.gpuBadge.textContent = `GPU ${gpuNow.toFixed(1)}°C`;
+        ui.gpuBadge.classList.remove("hidden");
+      } else if (isFinite(gpuUsage)) {
+        ui.gpuBadge.textContent = `GPU ${gpuUsage.toFixed(1)}%`;
+        ui.gpuBadge.classList.remove("hidden");
+      } else {
+        ui.gpuBadge.classList.add("hidden");
+      }
 
       // 磁碟
       renderDisks(ui, data.disk_io || {}, temps);
@@ -447,6 +458,7 @@ function ensureCard(host){
     function pickCpuTemp(temps){
       if(!temps) return NaN;
       const srcs = [];
+      if (temps.cpu) srcs.push(...temps.cpu);
       if (temps.k10temp)  srcs.push(...temps.k10temp);
       if (temps.coretemp) srcs.push(...temps.coretemp);
       let max = NaN;
@@ -456,17 +468,42 @@ function ensureCard(host){
       }
       return max;
     }
-    function pickGpuTemp(temps){
-      if(!temps || !temps.amdgpu) return NaN;
+    function pickGpuTemp(data, temps){
+      const gpus = Array.isArray(data?.gpus) ? data.gpus
+                  : (Array.isArray(data?.gpu) ? data.gpu
+                  : (data?.gpu ? [data.gpu] : []));
       let max = NaN;
+      for(const g of gpus){
+        const v = Number(g?.temperature_celsius);
+        if(isFinite(v)) max = isNaN(max) ? v : Math.max(max, v);
+      }
+      if (isFinite(max)) return max;
+
+      if(!temps || !temps.amdgpu) return NaN;
+      max = NaN;
       for(const t of temps.amdgpu){
         const v = Number(t.current);
         if(isFinite(v)) max = isNaN(max) ? v : Math.max(max, v);
       }
       return max;
     }
+    function pickGpuUsage(data){
+      const gpus = Array.isArray(data?.gpus) ? data.gpus
+                  : (Array.isArray(data?.gpu) ? data.gpu
+                  : (data?.gpu ? [data.gpu] : []));
+      let max = NaN;
+      for(const g of gpus){
+        const v = Number(g?.usage_percent);
+        if(isFinite(v)) max = isNaN(max) ? v : Math.max(max, v);
+      }
+      return max;
+    }
     function pickDiskTemp(dev, temps){
       if(!temps) return NaN;
+      if (temps.storage && temps.storage[dev] && Array.isArray(temps.storage[dev]) && temps.storage[dev].length){
+        const v = Number(temps.storage[dev][0].current);
+        if (isFinite(v)) return v;
+      }
       if (temps[dev] && Array.isArray(temps[dev]) && temps[dev].length){
         const v = Number(temps[dev][0].current);
         if (isFinite(v)) return v;
