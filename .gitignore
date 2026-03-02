@@ -41,3 +41,6 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# Local binary dependencies installed by scripts
+third_party/librehardwaremonitor/

@@ -8,6 +8,10 @@ param(
     [string]$UvPythonInstallDir = "",
     [bool]$EnsureUv = $true,
     [bool]$EnsureDeps = $true,
+    [bool]$EnsureLhm = $true,
+    [string]$LhmPath = "",
+    [string]$LhmInstallDir = "",
+    [string]$LhmDownloadUrl = "",
     [switch]$AtStartup,
     [switch]$WhatIf
 )
@@ -24,6 +28,9 @@ if ([string]::IsNullOrWhiteSpace($UvCacheDir)) {
 }
 if ([string]::IsNullOrWhiteSpace($UvPythonInstallDir)) {
     $UvPythonInstallDir = Join-Path $ProjectRoot ".uv-python"
+}
+if ([string]::IsNullOrWhiteSpace($LhmInstallDir)) {
+    $LhmInstallDir = Join-Path $ProjectRoot "third_party\librehardwaremonitor"
 }
 
 $StartScript = Join-Path $PSScriptRoot "start_windows_sender.ps1"
@@ -106,6 +113,113 @@ function Ensure-ProjectDependencies {
     }
 }
 
+function Resolve-LhmExePath {
+    param(
+        [string]$Candidate,
+        [string]$InstallDir,
+        [string]$RootPath
+    )
+
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($Candidate)) {
+        $candidates += $Candidate
+    }
+    $candidates += (Join-Path $InstallDir "LibreHardwareMonitor.exe")
+    $candidates += (Join-Path $RootPath "third_party\librehardwaremonitor\LibreHardwareMonitor.exe")
+    $candidates += "C:\Program Files\LibreHardwareMonitor\LibreHardwareMonitor.exe"
+    $candidates += "C:\Program Files (x86)\LibreHardwareMonitor\LibreHardwareMonitor.exe"
+    if ($env:LOCALAPPDATA) {
+        $candidates += (Join-Path $env:LOCALAPPDATA "LibreHardwareMonitor\LibreHardwareMonitor.exe")
+    }
+
+    foreach ($p in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($p) -and (Test-Path $p)) {
+            return [System.IO.Path]::GetFullPath($p)
+        }
+    }
+
+    return $null
+}
+
+function Get-LhmDownloadUrl {
+    param([string]$RequestedUrl)
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedUrl)) {
+        return $RequestedUrl
+    }
+
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest" -Headers @{ "User-Agent" = "hwmonitor-mqtt-agent" }
+    $assets = @($release.assets)
+    $preferred = $assets | Where-Object { $_.name -eq "LibreHardwareMonitor.zip" } | Select-Object -First 1
+    if (-not $preferred) {
+        $preferred = $assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1
+    }
+    if (-not $preferred) {
+        throw "Cannot find zip asset in latest LibreHardwareMonitor release."
+    }
+
+    return $preferred.browser_download_url
+}
+
+function Ensure-LhmExecutable {
+    param(
+        [string]$Candidate,
+        [string]$InstallDir,
+        [string]$RootPath,
+        [bool]$InstallIfMissing,
+        [string]$DownloadUrl
+    )
+
+    $resolved = Resolve-LhmExePath -Candidate $Candidate -InstallDir $InstallDir -RootPath $RootPath
+    if ($resolved) {
+        return $resolved
+    }
+
+    if (-not $InstallIfMissing) {
+        return $null
+    }
+
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+
+    $tmpRoot = Join-Path $env:TEMP ("lhm-install-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
+    $zipPath = Join-Path $tmpRoot "LibreHardwareMonitor.zip"
+    $extractDir = Join-Path $tmpRoot "extract"
+
+    try {
+        $url = Get-LhmDownloadUrl -RequestedUrl $DownloadUrl
+        Write-Output "Downloading LibreHardwareMonitor from: $url"
+        Invoke-WebRequest -Uri $url -OutFile $zipPath
+
+        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+        $exe = Get-ChildItem -Path $extractDir -Recurse -Filter "LibreHardwareMonitor.exe" | Select-Object -First 1
+        if (-not $exe) {
+            throw "LibreHardwareMonitor.exe not found after extraction."
+        }
+
+        $sourceDir = Split-Path -Parent $exe.FullName
+
+        if (Test-Path $InstallDir) {
+            Get-ChildItem -Path $InstallDir -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+        Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force
+
+        $installedExe = Join-Path $InstallDir "LibreHardwareMonitor.exe"
+        if (-not (Test-Path $installedExe)) {
+            throw "Failed to install LibreHardwareMonitor.exe into $InstallDir"
+        }
+
+        return [System.IO.Path]::GetFullPath($installedExe)
+    }
+    finally {
+        if (Test-Path $tmpRoot) {
+            Remove-Item -Path $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 $resolvedUvExe = $null
 if ($UseUv) {
     if ($WhatIf) {
@@ -124,6 +238,17 @@ if ($UseUv) {
     }
 }
 
+$resolvedLhmExe = $null
+if ($WhatIf) {
+    $resolvedLhmExe = Resolve-LhmExePath -Candidate $LhmPath -InstallDir $LhmInstallDir -RootPath $ProjectRoot
+    if (-not $resolvedLhmExe -and $EnsureLhm) {
+        $resolvedLhmExe = "<LHM will be auto-installed on real run>"
+    }
+}
+else {
+    $resolvedLhmExe = Ensure-LhmExecutable -Candidate $LhmPath -InstallDir $LhmInstallDir -RootPath $ProjectRoot -InstallIfMissing $EnsureLhm -DownloadUrl $LhmDownloadUrl
+}
+
 $argList = @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
@@ -132,7 +257,7 @@ $argList = @(
     "-PythonExe", "`"$PythonExe`""
 )
 
-if ($UseUv -and $resolvedUvExe) {
+if ($UseUv -and $resolvedUvExe -and -not ($resolvedUvExe -like "<*")) {
     $argList += "-UseUv:`$true"
     $argList += "-UvExe"
     $argList += "`"$resolvedUvExe`""
@@ -140,6 +265,11 @@ if ($UseUv -and $resolvedUvExe) {
     $argList += "`"$UvCacheDir`""
     $argList += "-UvPythonInstallDir"
     $argList += "`"$UvPythonInstallDir`""
+}
+
+if ($resolvedLhmExe -and -not ($resolvedLhmExe -like "<*")) {
+    $argList += "-LhmPath"
+    $argList += "`"$resolvedLhmExe`""
 }
 
 if ($WhatIf) {
@@ -152,6 +282,9 @@ if ($WhatIf) {
     Write-Output "  UvPythonInstallDir: $UvPythonInstallDir"
     Write-Output "  EnsureUv: $EnsureUv"
     Write-Output "  EnsureDeps: $EnsureDeps"
+    Write-Output "  EnsureLhm: $EnsureLhm"
+    Write-Output "  LhmPath: $resolvedLhmExe"
+    Write-Output "  LhmInstallDir: $LhmInstallDir"
     Write-Output "  AtStartup: $AtStartup"
     Write-Output "  Action: powershell.exe $($argList -join ' ')"
     exit 0
@@ -184,4 +317,6 @@ Write-Output "ProjectRoot: $ProjectRoot"
 Write-Output "UseUv: $UseUv"
 Write-Output "EnsureUv: $EnsureUv"
 Write-Output "EnsureDeps: $EnsureDeps"
+Write-Output "EnsureLhm: $EnsureLhm"
+Write-Output "LhmPath: $resolvedLhmExe"
 Write-Output "AtStartup: $AtStartup"

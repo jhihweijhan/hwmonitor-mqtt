@@ -8,6 +8,7 @@ Async System Monitor for Windows (Multi-rate MQTT sender)
 """
 
 import asyncio
+import csv
 import json
 import os
 import platform
@@ -363,6 +364,57 @@ def get_lhm_wmi_data() -> List[Any]:
         return conn.Sensor()
     except Exception as e:
         return []
+
+
+def get_gpu_block_nvidia_fallback() -> List[Dict[str, Any]]:
+    """Fallback GPU metrics for NVIDIA when LHM WMI is unavailable."""
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=utilization.gpu,temperature.gpu,memory.used,memory.total,temperature.memory",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return []
+
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+
+    gpus: List[Dict[str, Any]] = []
+    reader = csv.reader(result.stdout.strip().splitlines())
+    for row in reader:
+        try:
+            usage = _safe_float(row[0])
+            gpu_temp = _safe_float(row[1])
+            mem_used = _safe_float(row[2])
+            mem_total = _safe_float(row[3])
+            temps = [{"label": "GPU", "current": round(gpu_temp, 1)}]
+            if len(row) > 4:
+                try:
+                    mem_temp = _safe_float(row[4])
+                    if mem_temp > 0:
+                        temps.append({"label": "MEM", "current": round(mem_temp, 1)})
+                except Exception:
+                    pass
+            gpus.append(
+                {
+                    "usage_percent": round(usage, 1),
+                    "temperature_celsius": round(gpu_temp, 1) if gpu_temp > 0 else None,
+                    "temperature_label": "GPU",
+                    "temperatures": temps,
+                    "memory_used_mb": mem_used,
+                    "memory_total_mb": mem_total,
+                    "memory_percent": round(mem_used / mem_total * 100.0, 1) if mem_total > 0 else 0.0,
+                }
+            )
+        except Exception:
+            continue
+    return gpus
 
 
 def _parse_core_index(name: str) -> Optional[int]:
@@ -758,6 +810,11 @@ async def loop_lhm_wmi():
             metrics["cpu"] = out["cpu"]
             metrics["temperatures"] = out["temperatures"]
             metrics["gpu"] = out["gpus"]
+        else:
+            # Keep GPU visibility on NVIDIA hosts even when WMI/LHM is unavailable.
+            fallback_gpus = get_gpu_block_nvidia_fallback()
+            if fallback_gpus:
+                metrics["gpu"] = fallback_gpus
         await asyncio.sleep(10)
 
 

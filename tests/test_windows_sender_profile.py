@@ -249,3 +249,21 @@ def test_process_lhm_sensors_maps_cpu_gpu_and_storage():
     assert out["gpus"][0]["usage_percent"] == 65.0
     assert out["gpus"][0]["temperature_celsius"] == 71.0
     assert out["gpus"][0]["memory_percent"] == 25.0
+
+
+def test_windows_gpu_nvidia_fallback_parses_csv():
+    module = _import_agent_sender_windows()
+
+    class DummyResult:
+        def __init__(self):
+            self.returncode = 0
+            self.stdout = "57, 68, 2048, 8192, 70\n"
+
+    module.subprocess.run = lambda *args, **kwargs: DummyResult()
+    gpus = module.get_gpu_block_nvidia_fallback()
+
+    assert len(gpus) == 1
+    assert gpus[0]["usage_percent"] == 57.0
+    assert gpus[0]["temperature_celsius"] == 68.0
+    assert gpus[0]["memory_percent"] == 25.0
+    assert gpus[0]["temperatures"][0]["label"] == "GPU"

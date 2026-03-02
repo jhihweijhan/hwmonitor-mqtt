@@ -4,7 +4,8 @@ param(
     [switch]$UseUv,
     [string]$UvExe = "",
     [string]$UvCacheDir = "",
-    [string]$UvPythonInstallDir = ""
+    [string]$UvPythonInstallDir = "",
+    [string]$LhmPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,6 +15,10 @@ if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
 }
 $ProjectRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
 Set-Location $ProjectRoot
+
+if (-not [string]::IsNullOrWhiteSpace($LhmPath)) {
+    $env:LHM_PATH = $LhmPath
+}
 
 function Resolve-UvExePath {
     param([string]$Candidate)

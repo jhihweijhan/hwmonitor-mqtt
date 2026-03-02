@@ -39,3 +39,18 @@ docker compose logs -f sys_agent
 
 - 先手動啟動 LHM 並確認 WMI namespace 可讀，再切回 `LHM_AUTOSTART=1`
 - 若 sender 啟動了 LHM，預設會在 sender 結束時關閉（`LHM_KILL_ON_EXIT=1`）
+
+## Windows GPU 仍為空值（WinError 740）
+
+若日誌出現 `Failed to start LibreHardwareMonitor: [WinError 740]`，代表目前權限不足以啟動 LHM。
+
+建議：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\uninstall_windows_sender_task.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\install_windows_sender_task.ps1 -AtStartup
+```
+
+`-AtStartup` 會以 `SYSTEM` 建立排程，通常可避免 UAC 導致的 LHM 啟動失敗。
+
+另外，Windows sender 已加入 NVIDIA `nvidia-smi` fallback；若 LHM/WMI 暫不可用，仍可回報基本 GPU 指標。
