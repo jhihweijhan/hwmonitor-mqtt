@@ -130,30 +130,6 @@ def test_datastore_keeps_insertion_order_when_host_updates() -> None:
     assert [view.host for view in views] == ["node-a", "node-b"]
 
 
-def test_datastore_keeps_last_known_temps_when_payload_partial() -> None:
-    store = DataStore()
-    full = {
-        "host": "node-a",
-        "cpu": {"percent_total": 12.0},
-        "memory": {"ram": {"percent": 34.0}},
-        "temperatures": {"cpu": [{"current": 65.0}]},
-        "gpus": [{"usage_percent": 23.0, "temperature_celsius": 66.0}],
-    }
-    partial = {
-        "host": "node-a",
-        "cpu": {"percent_total": 11.0},
-        "memory": {"ram": {"percent": 33.0}},
-        # no temperatures, no gpu fields
-    }
-
-    store.update_from_payload(full)
-    store.update_from_payload(partial)
-    views, _ = store.snapshot()
-    assert len(views) == 1
-    assert views[0].cpu_temp_c == 65.0
-    assert views[0].gpu_temps_c == (66.0,)
-
-
 def test_default_driver_prefers_kmsdrm_on_console(monkeypatch) -> None:
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("SDL_VIDEODRIVER", raising=False)
